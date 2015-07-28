@@ -156,7 +156,8 @@ void CDXUTIL::initRenderState(){
 
 	D3DVERTEXELEMENT9 decl[]={
 		{0,0,D3DDECLTYPE_FLOAT3,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_POSITION,0},
-		{0,12,D3DDECLTYPE_FLOAT2,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_TEXCOORD,0},
+		{0,12,D3DDECLTYPE_FLOAT3,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_NORMAL,0},
+		{0,24,D3DDECLTYPE_FLOAT2,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_TEXCOORD,0},
 		D3DDECL_END()
 	};
 	IDirect3DVertexDeclaration9 * _decl;
@@ -180,6 +181,14 @@ void CDXUTIL::initRenderState(){
 	hWorld = m_effect->GetParameterByName(0,"g_mWorld");
 	hWVP = m_effect->GetParameterByName(0,"g_mWorldViewProj");
 	hTex = m_effect->GetParameterByName(0,"g_txDiffuse");
+	hEye = m_effect->GetParameterByName(0,"g_vEyePos");
+	hLight1 = m_effect->GetParameterByName(0,"g_vLightDir1");
+
+	D3DXVECTOR4 eyePt=D3DXVECTOR4(vEyePt,1.0);
+	m_effect->SetVector(hEye,&eyePt);
+
+	D3DXVECTOR4 vLightDir1=D3DXVECTOR4(0,0,-1,0);
+	m_effect->SetVector(hLight1,&vLightDir1);
 
 	m_effect->SetMatrix(hWorld,&matWorld);
 	D3DXMATRIX tmpMat=matWorld*matView*matProj;
@@ -289,16 +298,35 @@ void CDXUTIL::createFaceBuffer(vector<float> asm_point,short* asm_index,int numP
 	numVertex=asm_point.size()/3;
 	DWORD FVF;
 	m_device->GetFVF(&FVF);
+
+	CUSTOMVERTEX* points=new CUSTOMVERTEX[numVertex];
+	for(int i=0;i<numVertex;++i){
+		points[i].position=D3DXVECTOR3(asm_point[3*i],asm_point[3*i+1],asm_point[3*i+2]);
+		points[i].normal=D3DXVECTOR3(0.0,0.0,0.0);
+		points[i].texture.x=asm_point[3*i]/texWidth+0.5;
+		points[i].texture.y=0.5-asm_point[3*i+1]/texHeight;
+	}
+
+	for(int i=0;i<numPrim;++i){
+		D3DXVECTOR3 line1=points[int(asm_index[3*i])].position - points[int(asm_index[3*i+1])].position;
+		D3DXVECTOR3 line2=points[int(asm_index[3*i])].position - points[int(asm_index[3*i+2])].position;
+		D3DXVECTOR3 norm;
+		D3DXVec3Cross(&norm,&line1,&line2);
+		points[int(asm_index[3*i])].normal+=norm;
+		points[int(asm_index[3*i+1])].normal+=norm;
+		points[int(asm_index[3*i+2])].normal+=norm;
+	}
+
+	for(int i=0;i<numVertex;++i){
+		D3DXVec3Normalize(&(points[i].normal),&(points[i].normal));
+	}
+
 	m_device->CreateVertexBuffer(numVertex*sizeof(CDXUTIL::CUSTOMVERTEX),0,FVF,D3DPOOL_DEFAULT,&m_vb,NULL);
 	CUSTOMVERTEX* cvs;
 	m_vb->Lock(0,0,(void**)&cvs,0);
-	for(int i=0;i<numVertex;++i){
-		cvs[i].position=D3DXVECTOR3(asm_point[3*i],asm_point[3*i+1],asm_point[3*i+2]);
-		//cvs[i].color=0xffffffff;
-		cvs[i].texture.x=asm_point[3*i]/texWidth+0.5;
-		cvs[i].texture.y=0.5-asm_point[3*i+1]/texHeight;
-	}
+	memcpy(cvs,points,numVertex*sizeof(CDXUTIL::CUSTOMVERTEX));
 	m_vb->Unlock();
+	delete[] points;
 
 	this->numPrim=numPrim;
 	void* pVoid;

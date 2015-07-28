@@ -21,7 +21,7 @@ private:
 private:
 	struct CUSTOMVERTEX{
 		D3DXVECTOR3 position;
-		//D3DCOLOR color;
+		D3DXVECTOR3 normal;
 		D3DXVECTOR2 texture;
 	};
 private:
@@ -53,6 +53,8 @@ private:
 	D3DXHANDLE hWorld;
 	D3DXHANDLE hWVP;
 	D3DXHANDLE hTex;
+	D3DXHANDLE hEye;
+	D3DXHANDLE hLight1;
 
 	//other
 	float speed;
