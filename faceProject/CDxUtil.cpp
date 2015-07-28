@@ -134,35 +134,61 @@ CDXUTIL::CDXUTIL(int windowWidth,int windowHeight){
 	m_mouseDevice->SetCooperativeLevel(hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE); 
 	m_mouseDevice->Acquire();  
 
+	ID3DXBuffer *errorBuffer=0;
+	hr=D3DXCreateEffectFromFile(m_device,"./shader/pastis_shader.fx",NULL,NULL,
+		D3DXSHADER_DEBUG,NULL,&m_effect,&errorBuffer);
+	if(errorBuffer){
+		MessageBoxA(0,(char*)errorBuffer->GetBufferPointer(),0,0);
+		return;
+	}
+	if(FAILED(hr)){
+		MessageBoxA(0,"CreateShader - Failed",0,0);
+		return;
+	}
+
 	initRenderState();
 }
 
 void CDXUTIL::initRenderState(){
-	// Turn off culling
-	m_device->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
 
 	// Turn off D3D lighting
 	m_device->SetRenderState( D3DRS_LIGHTING, FALSE );
 
-	// Turn on the zbuffer
-	m_device->SetRenderState( D3DRS_ZENABLE, TRUE );
-
-
-	m_device->SetFVF(D3DFVF_CUSTOMVERTEX);
+	D3DVERTEXELEMENT9 decl[]={
+		{0,0,D3DDECLTYPE_FLOAT3,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_POSITION,0},
+		{0,12,D3DDECLTYPE_FLOAT2,D3DDECLMETHOD_DEFAULT,D3DDECLUSAGE_TEXCOORD,0},
+		D3DDECL_END()
+	};
+	IDirect3DVertexDeclaration9 * _decl;
+	m_device->CreateVertexDeclaration(decl,&_decl);
+	m_device->SetVertexDeclaration(_decl);
 
 	D3DXMatrixIdentity( &matWorld );
-	m_device->SetTransform( D3DTS_WORLD, &matWorld );
+	//m_device->SetTransform( D3DTS_WORLD, &matWorld );
 
 	vEyePt=D3DXVECTOR3( 0.0f, 0.0f,-1000.0f );
 	vLookatPt=D3DXVECTOR3( 0.0f, 0.0f, 0.0f );
 	vUpVec=D3DXVECTOR3( 0.0f, 1.0f, 0.0f );
-	D3DXMATRIXA16 matView;
 	D3DXMatrixLookAtLH( &matView, &vEyePt, &vLookatPt, &vUpVec );
-	m_device->SetTransform( D3DTS_VIEW, &matView );
+	//m_device->SetTransform( D3DTS_VIEW, &matView );
 
-	D3DXMATRIXA16 matProj;
 	D3DXMatrixPerspectiveFovLH( &matProj, D3DX_PI / 4, 1.0f, 1.0f, 10000.0f );
-	m_device->SetTransform( D3DTS_PROJECTION, &matProj );
+	//m_device->SetTransform( D3DTS_PROJECTION, &matProj );
+
+	HANDLE hr;
+	//get handle
+	hWorld = m_effect->GetParameterByName(0,"g_mWorld");
+	hWVP = m_effect->GetParameterByName(0,"g_mWorldViewProj");
+	hTex = m_effect->GetParameterByName(0,"g_txDiffuse");
+
+	m_effect->SetMatrix(hWorld,&matWorld);
+	D3DXMATRIX tmpMat=matWorld*matView*matProj;
+	m_effect->SetMatrix(hWVP,&tmpMat);
+
+	//set technique
+	D3DXHANDLE hTech = m_effect->GetTechniqueByName("T0");
+	m_effect->SetTechnique(hTech);
+
 }
 
 void CDXUTIL::beginScene(){
@@ -197,38 +223,20 @@ void CDXUTIL::go(){
 	}
 }
 
-void CDXUTIL::createTestVertexBuffer(){
-	if(m_vb!=NULL)
-		m_vb->Release();
-	m_device->CreateVertexBuffer(3*sizeof(CDXUTIL::CUSTOMVERTEX),0,this->D3DFVF_CUSTOMVERTEX,D3DPOOL_DEFAULT,&m_vb,NULL);
-	CUSTOMVERTEX* cvs;
-	m_vb->Lock(0,0,(void**)&cvs,0);
-	cvs[0].position=D3DXVECTOR3(0,200,0);
-	cvs[0].color=0xffffffff;
-	cvs[1].position=D3DXVECTOR3(100,0,0);
-	cvs[1].color=0x00ff0000;
-	cvs[2].position=D3DXVECTOR3(-100,0,0);
-	cvs[2].color=0x0000ff00;
-	m_vb->Unlock();
-	numVertex=3;
-
-	short testIdx[]=
-	{
-		0,1,2
-	};
-	void* pVoid;
-	m_device->CreateIndexBuffer(sizeof(testIdx),0,D3DFMT_INDEX16,D3DPOOL_MANAGED,&m_ib,NULL);
-	m_ib->Lock(0,0,(void**)&pVoid,0);
-	memcpy(pVoid,testIdx,sizeof(testIdx));
-	m_ib->Unlock();
-	numPrim=1;
-}
-
 void CDXUTIL::drawPrim(){
-	m_device->SetStreamSource(0,m_vb,0,sizeof(CUSTOMVERTEX));
-	m_device->SetIndices(m_ib);
-	m_device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,numVertex,0,numPrim);
-	//m_device->DrawPrimitive(D3DPT_TRIANGLESTRIP,0,1);
+
+	UINT numPasses=0;
+	m_effect->Begin(&numPasses,0);
+
+	for(int i=0;i<numPasses;++i){
+		m_effect->BeginPass(i);
+		m_device->SetStreamSource(0,m_vb,0,sizeof(CUSTOMVERTEX));
+		m_device->SetIndices(m_ib);
+		m_device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST,0,0,numVertex,0,numPrim);
+		//m_device->DrawPrimitive(D3DPT_TRIANGLESTRIP,0,1);
+		m_effect->EndPass();
+	}
+	m_effect->End();
 }
 
 CDXUTIL::~CDXUTIL(){
@@ -246,6 +254,8 @@ CDXUTIL::~CDXUTIL(){
 		m_mouseDevice->Release();
 	if(m_keyboardDevice!=NULL)
 		m_keyboardDevice->Release();
+	if(m_effect!=NULL)
+		m_effect->Release();
 }
 
 void CDXUTIL::readInput(){
@@ -255,34 +265,38 @@ void CDXUTIL::readInput(){
 	vEyePt.z=vEyePt.z>-10?-10:vEyePt.z;
 	if(m_diMouseState.rgbButtons[0] & 0x80)
 	{
-		D3DXMATRIXA16 tempMat;
 		angle-=m_diMouseState.lX*speed;
 		angle=angle>(D3DX_PI/2.1)?(D3DX_PI/2.1):angle;
 		angle=angle<-(D3DX_PI/2.1)?-(D3DX_PI/2.1):angle;
-		D3DXMatrixRotationY(&tempMat,angle);
-		m_device->SetTransform( D3DTS_WORLD, &tempMat );
+		D3DXMatrixRotationY(&matWorld,angle);
+		m_device->SetTransform( D3DTS_WORLD, &matWorld );
 		//D3DXMatrixRotationY(&tempMat,-m_diMouseState.lX*speed);
 		//matWorld*=tempMat;
 		//m_device->SetTransform( D3DTS_WORLD, &matWorld );
 
 	}
-	D3DXMATRIXA16 matView;
 	D3DXMatrixLookAtLH( &matView, &vEyePt, &vLookatPt, &vUpVec );
 	m_device->SetTransform( D3DTS_VIEW, &matView );
+
+	m_effect->SetMatrix(hWorld,&matWorld);
+	D3DXMATRIX tmpMat=matWorld*matView*matProj;
+	m_effect->SetMatrix(hWVP,&tmpMat);
 }
 
 void CDXUTIL::createFaceBuffer(vector<float> asm_point,short* asm_index,int numPrim,int texWidth,int texHeight,char* texture_add){
 	if(m_vb!=NULL)
 		m_vb->Release();
 	numVertex=asm_point.size()/3;
-	m_device->CreateVertexBuffer(numVertex*sizeof(CDXUTIL::CUSTOMVERTEX),0,this->D3DFVF_CUSTOMVERTEX,D3DPOOL_DEFAULT,&m_vb,NULL);
+	DWORD FVF;
+	m_device->GetFVF(&FVF);
+	m_device->CreateVertexBuffer(numVertex*sizeof(CDXUTIL::CUSTOMVERTEX),0,FVF,D3DPOOL_DEFAULT,&m_vb,NULL);
 	CUSTOMVERTEX* cvs;
 	m_vb->Lock(0,0,(void**)&cvs,0);
 	for(int i=0;i<numVertex;++i){
 		cvs[i].position=D3DXVECTOR3(asm_point[3*i],asm_point[3*i+1],asm_point[3*i+2]);
-		cvs[i].color=0xffffffff;
-		cvs[i].tu=asm_point[3*i]/texWidth+0.5;
-		cvs[i].tv=0.5-asm_point[3*i+1]/texHeight;
+		//cvs[i].color=0xffffffff;
+		cvs[i].texture.x=asm_point[3*i]/texWidth+0.5;
+		cvs[i].texture.y=0.5-asm_point[3*i+1]/texHeight;
 	}
 	m_vb->Unlock();
 
@@ -296,9 +310,12 @@ void CDXUTIL::createFaceBuffer(vector<float> asm_point,short* asm_index,int numP
 	if(texture_add!=NULL){
 		D3DXCreateTextureFromFileA(m_device,texture_add,&m_texture);
 	}
-	m_device->SetTexture( 0, m_texture );
-	m_device->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
-	m_device->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
-	m_device->SetTextureStageState( 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
-	m_device->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_DISABLE );
+
+	m_effect->SetTexture(hTex,m_texture);
+
+	//m_device->SetTexture( 0, m_texture );
+	//m_device->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_MODULATE );
+	//m_device->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_TEXTURE );
+	//m_device->SetTextureStageState( 0, D3DTSS_COLORARG2, D3DTA_DIFFUSE );
+	//m_device->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_DISABLE );
 }

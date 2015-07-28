@@ -80,6 +80,11 @@
     <ClInclude Include="CAsmUtil.h" />
     <ClInclude Include="CDxUtil.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\pastis_shader.fx">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -47,7 +47,12 @@ int main(int argc, char *argv[]){
 	CASMUTIL asmUtil(model_add,haar_add);
 	asmUtil.fit(img_add,true);
 	CDXUTIL dxUtil;
-	dxUtil.createFaceBuffer(asmUtil.getPointList(),asmUtil.getPointIndex(),asmUtil.getNumPrim(),asmUtil.getTextureWidth(),asmUtil.getTextureHeight(),img_add);
+	dxUtil.createFaceBuffer(asmUtil.getPointList(),
+		asmUtil.getPointIndex(),
+		asmUtil.getNumPrim(),
+		asmUtil.getTextureWidth(),
+		asmUtil.getTextureHeight(),
+		img_add);
 	dxUtil.go();
 	return 0;
 }

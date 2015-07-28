@@ -9,7 +9,6 @@ using namespace std;
 class CDXUTIL{
 public:
 	CDXUTIL(int windowWidth=800,int windowHeight=600);
-	void createTestVertexBuffer();
 	void createFaceBuffer(vector<float> asm_point,short* asm_index,int numPrim,int texWidth,int texHeight,char* texture_add=NULL);
 	void go();
 	~CDXUTIL();
@@ -22,11 +21,11 @@ private:
 private:
 	struct CUSTOMVERTEX{
 		D3DXVECTOR3 position;
-		D3DCOLOR color;
-		FLOAT tu,tv;
+		//D3DCOLOR color;
+		D3DXVECTOR2 texture;
 	};
-	const static DWORD D3DFVF_CUSTOMVERTEX=D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1;
 private:
+	//dx resources
 	IDirect3DDevice9 *m_device;
 	IDirect3DVertexBuffer9 *m_vb;
 	IDirect3DIndexBuffer9 *m_ib;
@@ -34,12 +33,28 @@ private:
 	LPDIRECTINPUT8 m_directInput;
 	LPDIRECTINPUTDEVICE8 m_mouseDevice;
 	LPDIRECTINPUTDEVICE8 m_keyboardDevice;
+	LPD3DXEFFECT m_effect;
+
+	//input data
 	char m_pKeyStateBuffer[256];
 	DIMOUSESTATE m_diMouseState;
+
+	//view parameter
 	D3DXVECTOR3 vEyePt;
 	D3DXVECTOR3 vLookatPt;
 	D3DXVECTOR3 vUpVec;
-	D3DXMATRIXA16 matWorld;
+
+	//matrix
+	D3DXMATRIX matWorld;
+	D3DXMATRIX matView;
+	D3DXMATRIX matProj;
+
+	//shader handle
+	D3DXHANDLE hWorld;
+	D3DXHANDLE hWVP;
+	D3DXHANDLE hTex;
+
+	//other
 	float speed;
 	int numVertex;
 	int numPrim;
