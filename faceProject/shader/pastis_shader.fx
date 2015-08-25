@@ -44,11 +44,11 @@ PSIn VSmain(VSIn input){
 
 float4 PSmain(PSIn input): SV_Target{
 	float4 diffuse=tex2D(diffuseSamp,input.tex)*g_vDiffuseColor;
-	float4 lighting=saturate(dot(input.norm,g_vLightDir1))*diffuse;
+	float4 lighting=saturate(dot(input.norm,normalize(g_vLightDir1)))*diffuse;
 
 	float3 eyeObj=normalize(g_vEyePos.xyz-input.vPos);
 	float3 halfAngle=normalize(eyeObj+g_vLightDir1);
-	float4 spec=pow(saturate(dot(halfAngle,input.norm )),32)*g_vLightColor*0.3;
+	float4 spec=pow(saturate(dot(halfAngle,input.norm )),32)*g_vLightColor*0.2;
 	
 	return lighting + spec;
 }
