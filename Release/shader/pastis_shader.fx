@@ -47,8 +47,10 @@ float4 PSmain(PSIn input): SV_Target{
 	float4 lighting=saturate(dot(input.norm,normalize(g_vLightDir1)))*diffuse;
 
 	float3 eyeObj=normalize(g_vEyePos.xyz-input.vPos);
-	float3 halfAngle=normalize(eyeObj+g_vLightDir1);
-	float4 spec=pow(saturate(dot(halfAngle,input.norm )),32)*g_vLightColor*0.1;
+	float3 vNormal=normalize(input.norm);
+	float3 vReflection=normalize(2*dot(eyeObj,vNormal)*vNormal-eyeObj);
+	float fRdotL=saturate(dot(vReflection,g_vLightDir1 ));
+	float4 spec=pow(fRdotL,32)*g_vLightColor*0.1;
 	
 	return lighting + spec;
 }
