@@ -48,7 +48,7 @@ float4 PSmain(PSIn input): SV_Target{
 
 	float3 eyeObj=normalize(g_vEyePos.xyz-input.vPos);
 	float3 halfAngle=normalize(eyeObj+g_vLightDir1);
-	float4 spec=pow(saturate(dot(halfAngle,input.norm )),32)*g_vLightColor*0.3;
+	float4 spec=pow(saturate(dot(halfAngle,input.norm )),32)*g_vLightColor*0.1;
 	
 	return lighting + spec;
 }
