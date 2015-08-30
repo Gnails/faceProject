@@ -20,8 +20,9 @@ cbuffer cbUser{
 	float4 g_vEyePos;
 	float4 g_vLightDir1;
 	float4 g_vLightDir2;
-	float4 g_vLightColor={1.0,1.0,1.0,0.0};
-	float4 g_vDiffuseColor={0.7,0.7,0.7,1.0};
+	float4 g_vLightColor={1.0,1.0,1.0,1.0};
+	float4 g_vDiffuseColor={0.6,0.6,0.6,1.0};
+	float4 g_vAmbientColor={0.4,0.4,0.4,1.0};
 };
 
 texture2D g_txDiffuse;
@@ -43,12 +44,15 @@ PSIn VSmain(VSIn input){
 }
 
 float4 PSmain(PSIn input): SV_Target{
-	float4 diffuse=tex2D(diffuseSamp,input.tex)*g_vDiffuseColor;
-	float4 lighting=saturate(dot(input.norm,normalize(g_vLightDir1)))*diffuse;
+	float4 vTexColor=tex2D(diffuseSamp,input.tex);
+	float4 lighting=saturate(dot(input.norm,normalize(g_vLightDir1)))*g_vDiffuseColor;
+	lighting=(lighting+g_vAmbientColor)*vTexColor;
 
 	float3 eyeObj=normalize(g_vEyePos.xyz-input.vPos);
-	float3 halfAngle=normalize(eyeObj+g_vLightDir1);
-	float4 spec=pow(saturate(dot(halfAngle,input.norm )),32)*g_vLightColor*0.2;
+	float3 vNormal=normalize(input.norm);
+	float3 vReflection=normalize(2*dot(eyeObj,vNormal)*vNormal-eyeObj);
+	float fRdotL=saturate(dot(vReflection,g_vLightDir1 ));
+	float4 spec=pow(fRdotL,32)*g_vLightColor*0.2;
 	
 	return lighting + spec;
 }
