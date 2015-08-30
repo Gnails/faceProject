@@ -25,6 +25,10 @@ private:
 		D3DXVECTOR2 texture;
 	};
 private:
+	//windows parameter
+	int m_windowWidth;
+	int m_windowHeight;
+
 	//dx resources
 	IDirect3DDevice9 *m_device;
 	IDirect3DVertexBuffer9 *m_vb;

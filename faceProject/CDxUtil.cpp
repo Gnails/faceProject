@@ -28,6 +28,9 @@ bool Device_Read(IDirectInputDevice8 *pDIDevice, void* pBuffer, long lSize)
 
 CDXUTIL::CDXUTIL(int windowWidth,int windowHeight){
 
+	m_windowWidth=windowWidth;
+	m_windowHeight=windowHeight;
+
 	m_device=NULL;
 	m_texture=NULL;
 	m_vb=NULL;
@@ -173,7 +176,7 @@ void CDXUTIL::initRenderState(){
 	D3DXMatrixLookAtLH( &matView, &vEyePt, &vLookatPt, &vUpVec );
 	//m_device->SetTransform( D3DTS_VIEW, &matView );
 
-	D3DXMatrixPerspectiveFovLH( &matProj, D3DX_PI / 4, 1.0f, 1.0f, 10000.0f );
+	D3DXMatrixPerspectiveFovLH( &matProj, D3DX_PI / 4, float(m_windowWidth)/float(m_windowHeight), 1.0f, 10000.0f );
 	//m_device->SetTransform( D3DTS_PROJECTION, &matProj );
 
 	HANDLE hr;
